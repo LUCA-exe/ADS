@@ -1,2 +1,2 @@
 # ADS
-Archive of exercises and use-cases for technical discussions on algorithms, data science and machine learning
+Archive of use-cases for technical discussions on algorithms and data science projects

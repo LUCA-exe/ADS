@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
+import torch
 from collections import Counter, defaultdict
 from torchvision.datasets import CIFAR10
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 import os 
+import concurrent.futures
 
 # Utils functions
 def check_variable_value(variable, value_list):
@@ -21,15 +23,28 @@ def check_variable_value(variable, value_list):
 
     return True
 
-# Get the train/val loader fromt the custom class
-def get_loader():
-  pass
+def augment_image(row, transform_pipeline):
+  """
+  :param image: PIL Image to modify
+  :param transform_pipeline: Pipeline to apply to the image
+  :return: Tuple -> (Modified image as a PIL image and the label)
+  """
+  processed_image = transform_pipeline(row[0])
+  return (processed_image, row[1])
+
+# Get the train loader fromt the custom class
+def get_train_loader():
+
+  dataset = ImagesDataset()
+  print(dataset[0])
+  
+  return 
 
 class ImagesDataset(Dataset):
   """ Class to work with CIFAR-10 (train split)
   """
 
-  def __init__(self, name='CIFAR-10', root_dir='Datasets'):
+  def __init__(self, name='CIFAR-10', root_dir='Datasets', data_augmentation=True, transform = None, train_shape=(64, 32)):
     """ Custom class for dataset loading (download from Torchvision)
 
     :param name: Name (str) of the dataset to donwload
@@ -41,45 +56,58 @@ class ImagesDataset(Dataset):
     else:
       print(f"Folder {root_dir} does not exist: creating the folder and downloading the dataset")
 
+    # If not checked on the parsing arguments
     check_variable_value(name, ["CIFAR-10", "CIFAR-100"])
 
     if name == 'CIFAR-10':
       # Access to the data (PIL Image, Num_Class)
-      train_set = CIFAR10(root = root_dir, train=True, download=True)
-    
-    # Custom transform-pipeline for data augmentation
-    self.transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+      self.train_set = CIFAR10(root = root_dir, train=True, download=True)
+
+    # Data augmentation pipeline to agument the dataset
+    if data_augmentation == True:
+      self.augment_dataset()
+      
+      # reload from disk after saving the new images
+
+    if transform != None:
+      # Just transform to a tensor and resize for training
+      self.transform = transforms.Compose(
+      [transforms.ToTensor(),
+      transforms.Resize(train_shape)])
 
   def __len__(self):
-        return len(self.train_set)
+    return len(self.train_set)
 
   def __getitem__(self, index):
-     return 
-    
+    image, label = self.train_set[index]
+    return self.transform(image), label
 
-  def get_split_data(self, split_percentage=0.8):
-      """ Function to retrieve the Train, Test split using the 'mask'
-      :param split_percentage: Split of dataset to be used as training set.
-      :return: Numpy vectors (X/y split) returned as tuple
-      """
-      X = self.df.values[:, :4].astype(float)
-      y = self.df.values[:, 4]
-      train_num = floor(X.shape[0] * 0.8) # Apply the percentage split
-      mask = np.array([True] * train_num + [False] * (X.shape[0] - train_num))
-      np.random.shuffle(mask)
+  def augment_dataset(self, save_on_disk = True):
 
-      # Retrieve the splits
-      X_train, X_test = X[mask], X[~mask]
-      y_train, y_test = y[mask], y[~mask]
+    # Composed transformations to augment the dataset
+    pipeline = torch.nn.Sequential(
+    transforms.RandomCrop(30),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomVerticalFlip(p=0.5),
+    transforms.ColorJitter(brightness=20),
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    transforms.ToPILImage() # Final conversion to save it on the disk
+    )
 
-      return (X_train, X_test, y_train, y_test)
+    # Parallelized data augmentation
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+      # Submit the processing tasks to the executor
+      futures = [executor.submit(augment_image, row, pipeline) for row in self.train_set]
+      # Retrieve the results as they become available
+      processed_images = [future.result() for future in concurrent.futures.as_completed(futures)]
 
-# Function to call the Dataset classes
+    # Save augmented images
+    torch.save(processed_images, './train.pt')
+    return 
+
 def main():
-  dataset = ImagesDataset()
-
+  # Main loop to retrieve the Data loader
+  train_loader = get_train_loader()
 
 if __name__ == '__main__':
   main()

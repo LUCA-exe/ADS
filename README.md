@@ -1,2 +1,2 @@
 # ADS
-Archive of use-cases for technical discussions on algorithms and data science projects
+Archive of use-cases and function for data science projects

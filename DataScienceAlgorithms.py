@@ -3,6 +3,9 @@ import pandas as pd
 from collections import Counter, defaultdict
 from math import floor
 
+# For the reproducibilty of the experiments
+np.random.seed(10)
+
 # Utils function
 def check_variable_value(variable, value_list):
     """
@@ -17,6 +20,9 @@ def check_variable_value(variable, value_list):
         raise ValueError("Variable value not found in the list.")
 
     return True
+
+def accuracy_score(y_true, y_pred):
+    return (y_true==y_pred).sum()/len(y_true)
 
 class DatasetWrapper():
 
@@ -163,14 +169,27 @@ class KNearestNeighbors():
         return y_pred
 
 # Implement the custom class of the classificator with a toy dataset
-def main():
+def classification_algorithm():
     df = DatasetWrapper("https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data")
     df.preliminary_exploration()
-    knn_model = KNearestNeighbors(3, "euclidean")
     X_train, X_test, y_train, y_test = df.get_split_data()
-    knn_model.fit(X_train, y_train)
-    y_pred = knn_model.predict(X_test)
-    print(y_pred)
+
+    # List of parameter K
+    k_values = list(range(2, 15))
+    results = [] # List to append the tuple in form of (k, accuracy value)
+    # Optimization loop
+    for k in k_values:
+      knn_model = KNearestNeighbors(k, "euclidean")
+      knn_model.fit(X_train, y_train)
+      y_pred = knn_model.predict(X_test)
+      accuracy = accuracy_score(y_test, y_pred)
+      results.append((k, accuracy))
+
+    #print final results for the train/test splits
+    print(f"\nThe classification accuracy for K values : {k_values}\n{results}")
+
+    best_k, accuracy = sorted(results, key=lambda x: x[1], reverse=True) [0]
+    print(f"\nThe best K configuration is K: {best_k}   Accuracy: {round(accuracy,3)}")
 
 if __name__ == '__main__':
-    main()
+    classification_algorithm()

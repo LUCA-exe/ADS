@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from collections import Counter, defaultdict
 from math import floor
+from sklearn.datasets import make_blobs
 
 # For the reproducibilty of the experiments
 np.random.seed(10)
@@ -168,6 +169,19 @@ class KNearestNeighbors():
             y_pred = np.array([self.weighted_majority_voting(self.y_train[knn][i], weights[:, i]) for i in range(len(self.y_train[knn]))])
         return y_pred
 
+class KMeans():
+
+    def __init__(self, n_clusters=3, max_iter = 100):
+        """ Custom class to implement the kMeans clustering technique through the Numpy package
+        
+        :param n_clusters: Number of clusters
+        :param max_iter: Maximum number of iteration allowed
+        """
+        self.n_clusters = n_clusters
+        self.max_iter = max_iter
+        self.centroids = None
+        self.labels = None
+
 # Implement the custom class of the classificator with a toy dataset
 def classification_algorithm():
     df = DatasetWrapper("https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data")
@@ -191,5 +205,35 @@ def classification_algorithm():
     best_k, accuracy = sorted(results, key=lambda x: x[1], reverse=True) [0]
     print(f"\nThe best K configuration is K: {best_k}   Accuracy: {round(accuracy,3)}")
 
+def clustering_algorithm():
+  X = make_blobs(n_samples=1000, n_features=2)
+
+
 if __name__ == '__main__':
     classification_algorithm()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
